@@ -1,5 +1,7 @@
 # Logs
 
+__pycache__/
+
 logs
 _.log
 npm-debug.log_

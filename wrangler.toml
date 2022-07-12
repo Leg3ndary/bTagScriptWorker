@@ -1,8 +1,0 @@
-name = "tagscript"
-account_id = "ec44a4b99d6f7e932ffa6a30d17d1a84"
-workers_dev = true
-main = "dist/main.js"
-compatibility_date = "2022-07-11"
-
-[build]
-command = "npm run build"
