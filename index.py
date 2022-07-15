@@ -95,7 +95,7 @@ def main() -> None:
     return {"Status": "Alive"}
 
 
-@app.route("v1/process/<string:tagscript>")
+@app.route("/v1/process/<string:tagscript>")
 def v1_process(tagscript: str) -> None:
     """
     Main function to return "Status"
@@ -116,7 +116,7 @@ def v1_process(tagscript: str) -> None:
     }
     return jsonify(response)
 
-@app.route("v2/process/<string:tagscript>")
+@app.route("/v2/process/<string:tagscript>")
 def v2_process(tagscript: str) -> None:
     """
     Main function to return "Status"
