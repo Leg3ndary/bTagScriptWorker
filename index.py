@@ -17,12 +17,13 @@ copies or substantial portions of the Software.
 import asyncio
 import sys
 import urllib
-from urllib.parse import unquote
 from random import randint
 from threading import Thread
+from urllib.parse import unquote
 
 import bTagScript as tse
-from flask import Flask
+from flask import Flask, jsonify
+from flask_cors import CORS
 
 tse_blocks = [
     tse.block.MathBlock(),
@@ -34,8 +35,7 @@ tse_blocks = [
     tse.block.BreakBlock(),
     tse.block.StrfBlock(),
     tse.block.StopBlock(),
-    tse.block.AssignmentBlock(),
-    tse.block.ShortCutRedirectBlock("args"),
+    tse.block.VarBlock(),
     tse.block.LooseVariableGetterBlock(),
     tse.block.EmbedBlock(),
     tse.block.ReplaceBlock(),
@@ -57,6 +57,34 @@ tse_blocks = [
 tsei = tse.interpreter.Interpreter(blocks=tse_blocks)
 
 app = Flask("bTagScriptWorker")
+CORS(app)
+
+def clean_tagscript(tagscript: str) -> str:
+    """
+    clean the tagscript
+    """
+    tagscript = (
+        tagscript.replace("Ꜳ", "\\")
+        .replace("₩", "/")
+        .replace("ꜳ", "<")
+        .replace("ꜵ", ">")
+        .replace("Ꜷ", ".")
+    )
+    return tagscript
+
+
+def encode_tagscript(tagscript: str) -> str:
+    """
+    clean the tagscript
+    """
+    tagscript = (
+        tagscript.replace("\\", "Ꜳ")
+        .replace("/", "₩")
+        .replace("<", "ꜳ")
+        .replace(">", "ꜵ")
+        .replace(".", "Ꜷ")
+    )
+    return tagscript
 
 
 @app.route("/")
@@ -67,30 +95,47 @@ def main() -> None:
     return {"Status": "Alive"}
 
 
-@app.route("/process/<string:tagscript>")
-def process(tagscript: str) -> None:
+@app.route("v1/process/<string:tagscript>")
+def v1_process(tagscript: str) -> None:
     """
     Main function to return "Status"
     """
-
-    output = tsei.process(unquote(tagscript.replace("Ꜳ", "/")) + r"{debug}")
+    output = tsei.process(clean_tagscript(unquote(tagscript)) + r"{debug}")
 
     actions = {}
 
     for i, v in output.actions.items():
         if i == "embed":
             actions[i] = v.to_dict()
-
         else:
             actions[i] = v
-
     response = {
-        "body": output.body,
+        "body": encode_tagscript(output.body),
         "actions": actions,
-        "extras": output.extras
- }
+        "extras": output.extras,
+    }
+    return jsonify(response)
 
-    return response
+@app.route("v2/process/<string:tagscript>")
+def v2_process(tagscript: str) -> None:
+    """
+    Main function to return "Status"
+    """
+    output = tsei.process(clean_tagscript(unquote(tagscript)) + r"{debug}")
+
+    actions = {}
+
+    for i, v in output.actions.items():
+        if i == "embed":
+            actions[i] = v.to_dict()
+        else:
+            actions[i] = v
+    response = {
+        "body": encode_tagscript(output.body),
+        "actions": actions,
+        "extras": output.extras,
+    }
+    return jsonify(response)
 
 
 def run() -> None:
