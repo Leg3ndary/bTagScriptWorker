@@ -159,7 +159,7 @@ async def keep_alive() -> None:
     """
     while True:
         await asyncio.sleep(randint(50, 100))
-        with urllib.request.urlopen("https://"):
+        with urllib.request.urlopen("https://btp.leg3ndary.repl.co"):
             pass
 
 
