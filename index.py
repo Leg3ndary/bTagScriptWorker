@@ -86,6 +86,12 @@ def encode_tagscript(tagscript: str) -> str:
     )
     return tagscript
 
+def clean_seeds(seeds: str) -> list:
+    """
+    Clean the seeds
+    """
+    return [seed.replace("\n", "").replace("\r", "") for seed in seeds]
+
 
 @app.route("/")
 def main() -> None:
@@ -98,7 +104,7 @@ def main() -> None:
 @app.route("/v1/process/<string:tagscript>")
 def v1_process(tagscript: str) -> None:
     """
-    Main function to return "Status"
+    v1 Process
     """
     output = tsei.process(clean_tagscript(unquote(tagscript)) + r"{debug}")
 
@@ -116,20 +122,22 @@ def v1_process(tagscript: str) -> None:
     }
     return jsonify(response)
 
-@app.route("/v2/process/<string:tagscript>")
-def v2_process(tagscript: str) -> None:
+@app.route("/v2/process/<string:tagscript>/<string:seeds>")
+def v2_process(tagscript: str, seeds: str) -> None:
     """
-    Main function to return "Status"
+    v2 Processor
     """
+    p = seeds
     output = tsei.process(clean_tagscript(unquote(tagscript)) + r"{debug}")
 
     actions = {}
 
-    for i, v in output.actions.items():
-        if i == "embed":
-            actions[i] = v.to_dict()
+    for action, value in output.actions.items():
+        if action == "embed":
+            actions[action] = value.to_dict()
         else:
-            actions[i] = v
+            actions[action] = value
+
     response = {
         "body": encode_tagscript(output.body),
         "actions": actions,
