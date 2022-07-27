@@ -15,6 +15,7 @@ copies or substantial portions of the Software.
 """
 
 import asyncio
+from datetime import datetime
 import sys
 import urllib
 from random import randint
@@ -22,8 +23,51 @@ from threading import Thread
 from urllib.parse import unquote
 
 import bTagScript as tse
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
+
+class FakeAvatar:
+    """
+    Creating a fake avatar object
+    """
+
+    def __init__(self) -> None:
+        """
+        Initializing the fake avatar object
+        """
+        self.url = None
+
+class FakeMember:
+    """
+    Creating a fake discord.py member
+    """
+
+    def __init__(self, user: dict) -> None:
+        """
+        Initializing the fake member
+        """
+        self.name = user.get("username", "")
+        self.created_at = user.get("user")
+        self.id = user.get("id", "") # pylint: disable=C0103
+        self.timestamp = datetime.now()
+        self.color = user.get("color", "")
+        self.display_name = user.get("name", "")
+        self.display_avatar = FakeAvatar()
+        self.display_avatar.url = user.get("avatar", "")
+        self.discriminator = user.get("discriminator", "0001")
+        self.joined_at = datetime.fromtimestamp(user.get("joined_at", "0"))
+        self.mention = user.get("mention", "")
+        self.bot = False
+
+        '''
+        {
+            "bot": self.object.bot,
+            "top_role": getattr(self.object, "top_role", ""),
+            "boost": getattr(self.object, "premium_since", ""),
+            "timed_out": getattr(self.object, "timed_out_until", ""),
+            "banner": self.object.banner.url if self.object.banner else "",
+        }'''
+
 
 tse_blocks = [
     tse.block.MathBlock(),
@@ -86,12 +130,15 @@ def encode_tagscript(tagscript: str) -> str:
     )
     return tagscript
 
-def clean_seeds(seeds: str) -> list:
+def clean_seeds(seeds: str) -> dict:
     """
     Clean the seeds
     """
-    return [seed.replace("\n", "").replace("\r", "") for seed in seeds]
-
+    cleaned_seed = {
+        "user": tse.MemberAdapter(FakeMember(seeds.get("user"))),
+        "target": tse.MemberAdapter(FakeMember(seeds.get("target"))),
+    }
+    return cleaned_seed
 
 @app.route("/")
 def main() -> None:
@@ -122,13 +169,17 @@ def v1_process(tagscript: str) -> None:
     }
     return jsonify(response)
 
-@app.route("/v2/process/<string:tagscript>/<string:seeds>")
-def v2_process(tagscript: str, seeds: str) -> None:
+@app.route("/v2/process/", methods=["GET"])
+def v2_process() -> None:
     """
     v2 Processor
+
+    Uses get as post requires you to encode params and decode them, which is a pain.
     """
-    p = seeds
-    output = tsei.process(clean_tagscript(unquote(tagscript)) + r"{debug}")
+    headers = request.headers
+    #seeds = clean_seeds(clean_tagscript(headers.get("seeds", "")))
+    seeds = {}
+    output = tsei.process(headers.get("tagscript", "") + r"{debug}", seeds)
 
     actions = {}
 
