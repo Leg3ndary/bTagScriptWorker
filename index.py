@@ -118,6 +118,8 @@ tse_blocks = [
     tse.block.CommentBlock(),
     tse.block.OrdinalAbbreviationBlock(),
     tse.block.DebugBlock(),
+    tse.block.DeleteBlock(),
+    tse.block.ReactBlock(),
 ]
 tsei = tse.interpreter.Interpreter(blocks=tse_blocks)
 
