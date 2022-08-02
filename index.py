@@ -22,6 +22,7 @@ from random import randint
 from threading import Thread
 from urllib.parse import unquote
 
+import json
 import bTagScript as tse
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -47,7 +48,7 @@ class FakeMember:
         Initializing the fake member
         """
         self.name = user.get("username", "")
-        self.created_at = user.get("user")
+        self.created_at = datetime.fromtimestamp(int(user.get("created_at", 0)) if user.get("created_at", "").isdigit() else 0)
         self.id = user.get("id", "") # pylint: disable=C0103
         self.timestamp = datetime.now()
         self.color = user.get("color", "")
@@ -55,18 +56,10 @@ class FakeMember:
         self.display_avatar = FakeAvatar()
         self.display_avatar.url = user.get("avatar", "")
         self.discriminator = user.get("discriminator", "0001")
-        self.joined_at = datetime.fromtimestamp(user.get("joined_at", "0"))
+        self.joined_at = datetime.fromtimestamp(int(user.get("joined_at", 0)) if user.get("joined_at", "").isdigit() else 0)
         self.mention = user.get("mention", "")
         self.bot = False
-
-        '''
-        {
-            "bot": self.object.bot,
-            "top_role": getattr(self.object, "top_role", ""),
-            "boost": getattr(self.object, "premium_since", ""),
-            "timed_out": getattr(self.object, "timed_out_until", ""),
-            "banner": self.object.banner.url if self.object.banner else "",
-        }'''
+        self.banner = FakeAvatar()
 
 
 tse_blocks = [
@@ -103,7 +96,7 @@ tsei = tse.interpreter.Interpreter(blocks=tse_blocks)
 app = Flask("bTagScriptWorker")
 CORS(app)
 
-def clean_tagscript(tagscript: str) -> str:
+def decode_tagscript(tagscript: str) -> str:
     """
     clean the tagscript
     """
@@ -153,7 +146,7 @@ def v1_process(tagscript: str) -> None:
     """
     v1 Process
     """
-    output = tsei.process(clean_tagscript(unquote(tagscript)) + r"{debug}")
+    output = tsei.process(decode_tagscript(unquote(tagscript)) + r"{debug}")
 
     actions = {}
 
@@ -169,17 +162,16 @@ def v1_process(tagscript: str) -> None:
     }
     return jsonify(response)
 
-@app.route("/v2/process/", methods=["GET"])
+@app.route("/v2/process/", methods=["POST"])
 def v2_process() -> None:
     """
     v2 Processor
 
     Uses get as post requires you to encode params and decode them, which is a pain.
     """
-    headers = request.headers
-    #seeds = clean_seeds(clean_tagscript(headers.get("seeds", "")))
-    seeds = {}
-    output = tsei.process(headers.get("tagscript", "") + r"{debug}", seeds)
+    body = request.form
+    seeds = clean_seeds(json.loads(decode_tagscript(body.get("seeds", ""))))
+    output = tsei.process(decode_tagscript(body.get("tagscript", "")) + r"{debug}", seeds)
 
     actions = {}
 
@@ -194,6 +186,7 @@ def v2_process() -> None:
         "actions": actions,
         "extras": output.extras,
     }
+    print(response)
     return jsonify(response)
 
 
