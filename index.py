@@ -61,6 +61,34 @@ class FakeMember:
         self.bot = False
         self.banner = FakeAvatar()
 
+class FakeChannel:
+    """
+    Creating a fake discord.py channel
+    
+    {
+        "channel_type": "textchannel",
+        "nsfw": self.object.nsfw,
+        "mention": self.object.mention,
+        "topic": self.object.topic or None,
+        "slowmode": self.object.slowmode_delay,
+        "id": base.id,
+        "created_at": base.created_at,
+        "timestamp": int(base.created_at.timestamp()),
+        "name": getattr(base, "name", str(base)),
+    }"""
+    def __init__(self, channel: dict) -> None:
+        """
+        Initializing the fake channel
+        """
+        self.nsfw = channel.get("nsfw", False) if channel.get("nsfw") is bool else False
+        self.mention = channel.get("mention", "")
+        self.topic = channel.get("topic", "")
+        self.slowmode_delay = channel.get("slowmode", 0)
+        self.id = channel.get("id", "") # pylint: disable=C0103
+        self.created_at = datetime.fromtimestamp(int(channel.get("created_at", 0)) if channel.get("created_at", "").isdigit() else 0)
+        self.timestamp = datetime.now()
+        self.name = channel.get("name", "")
+
 
 tse_blocks = [
     tse.block.MathBlock(),
@@ -128,8 +156,10 @@ def clean_seeds(seeds: str) -> dict:
     Clean the seeds
     """
     cleaned_seed = {
+        "args": tse.StringAdapter(seeds.get("args", "")),
         "user": tse.MemberAdapter(FakeMember(seeds.get("user"))),
         "target": tse.MemberAdapter(FakeMember(seeds.get("target"))),
+        "channel": tse.ChannelAdapter(FakeChannel(seeds.get("channel"))),
     }
     return cleaned_seed
 
