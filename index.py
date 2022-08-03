@@ -218,7 +218,6 @@ def v2_process() -> None:
         "actions": actions,
         "extras": output.extras,
     }
-    print(response)
     return jsonify(response)
 
 
