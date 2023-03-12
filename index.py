@@ -228,7 +228,7 @@ def v2_process() -> None:
 
     Uses get as post requires you to encode params and decode them, which is a pain.
     """
-    uses = int(client.get("uses")) + 1
+    uses = str(int(client.get("uses")) + 1)
     client.set("uses", uses)
 
     body = request.form
@@ -249,7 +249,7 @@ def v2_process() -> None:
         "body": encode_tagscript(output.body),
         "actions": actions,
         "extras": output.extras,
-        "uses": uses,
+        "uses": uses
     }
     return jsonify(response)
 
