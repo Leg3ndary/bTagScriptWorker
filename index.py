@@ -15,17 +15,27 @@ copies or substantial portions of the Software.
 """
 
 import asyncio
-from datetime import datetime
+import json
+import os
 import sys
 import urllib
+from datetime import datetime
 from random import randint
 from threading import Thread
 from urllib.parse import unquote
 
-import json
 import bTagScript as tse
+import redis
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+
+client = redis.from_url(
+    url=os.environ["url"],
+    username="default",
+    password=os.environ["password"],
+    decode_responses=True,
+)
+
 
 class FakeAvatar:
     """
@@ -38,6 +48,7 @@ class FakeAvatar:
         """
         self.url = None
 
+
 class FakeMember:
     """
     Creating a fake discord.py member
@@ -48,23 +59,30 @@ class FakeMember:
         Initializing the fake member
         """
         self.name = user.get("username", "")
-        self.created_at = datetime.fromtimestamp(int(user.get("created_at", 0)) if user.get("created_at", "").isdigit() else 0)
-        self.id = user.get("id", "") # pylint: disable=C0103
+        self.created_at = datetime.fromtimestamp(
+            int(user.get("created_at", 0))
+            if user.get("created_at", "").isdigit()
+            else 0
+        )
+        self.id = user.get("id", "")  # pylint: disable=C0103
         self.timestamp = datetime.now()
         self.color = user.get("color", "")
         self.display_name = user.get("name", "")
         self.display_avatar = FakeAvatar()
         self.display_avatar.url = user.get("avatar", "")
         self.discriminator = user.get("discriminator", "0001")
-        self.joined_at = datetime.fromtimestamp(int(user.get("joined_at", 0)) if user.get("joined_at", "").isdigit() else 0)
+        self.joined_at = datetime.fromtimestamp(
+            int(user.get("joined_at", 0)) if user.get("joined_at", "").isdigit() else 0
+        )
         self.mention = user.get("mention", "")
         self.bot = False
         self.banner = FakeAvatar()
 
+
 class FakeChannel:
     """
     Creating a fake discord.py channel
-    
+
     {
         "channel_type": "textchannel",
         "nsfw": self.object.nsfw,
@@ -76,6 +94,7 @@ class FakeChannel:
         "timestamp": int(base.created_at.timestamp()),
         "name": getattr(base, "name", str(base)),
     }"""
+
     def __init__(self, channel: dict) -> None:
         """
         Initializing the fake channel
@@ -84,8 +103,12 @@ class FakeChannel:
         self.mention = channel.get("mention", "")
         self.topic = channel.get("topic", "")
         self.slowmode_delay = channel.get("slowmode", 0)
-        self.id = channel.get("id", "") # pylint: disable=C0103
-        self.created_at = datetime.fromtimestamp(int(channel.get("created_at", 0)) if channel.get("created_at", "").isdigit() else 0)
+        self.id = channel.get("id", "")  # pylint: disable=C0103
+        self.created_at = datetime.fromtimestamp(
+            int(channel.get("created_at", 0))
+            if channel.get("created_at", "").isdigit()
+            else 0
+        )
         self.timestamp = datetime.now()
         self.name = channel.get("name", "")
 
@@ -126,6 +149,7 @@ tsei = tse.interpreter.Interpreter(blocks=tse_blocks)
 app = Flask("bTagScriptWorker")
 CORS(app)
 
+
 def decode_tagscript(tagscript: str) -> str:
     """
     clean the tagscript
@@ -153,6 +177,7 @@ def encode_tagscript(tagscript: str) -> str:
     )
     return tagscript
 
+
 def clean_seeds(seeds: str) -> dict:
     """
     Clean the seeds
@@ -164,6 +189,7 @@ def clean_seeds(seeds: str) -> dict:
         "channel": tse.ChannelAdapter(FakeChannel(seeds.get("channel"))),
     }
     return cleaned_seed
+
 
 @app.route("/")
 def main() -> None:
@@ -194,6 +220,7 @@ def v1_process(tagscript: str) -> None:
     }
     return jsonify(response)
 
+
 @app.route("/v2/process/", methods=["POST"])
 def v2_process() -> None:
     """
@@ -201,9 +228,14 @@ def v2_process() -> None:
 
     Uses get as post requires you to encode params and decode them, which is a pain.
     """
+    uses = int(client.get("uses")) + 1
+    client.set("uses", uses)
+
     body = request.form
     seeds = clean_seeds(json.loads(decode_tagscript(body.get("seeds", ""))))
-    output = tsei.process(decode_tagscript(body.get("tagscript", "")) + r"{debug}", seeds)
+    output = tsei.process(
+        decode_tagscript(body.get("tagscript", "")) + r"{debug}", seeds
+    )
 
     actions = {}
 
@@ -217,6 +249,7 @@ def v2_process() -> None:
         "body": encode_tagscript(output.body),
         "actions": actions,
         "extras": output.extras,
+        "uses": uses,
     }
     return jsonify(response)
 
@@ -233,7 +266,7 @@ async def keep_alive() -> None:
     Keep the server alive
     """
     while True:
-        await asyncio.sleep(randint(50, 100))
+        await asyncio.sleep(randint(50, 80))
         with urllib.request.urlopen("https://btp.leg3ndary.repl.co"):
             pass
 
