@@ -30,9 +30,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-client = redis.from_url(
-    url=os.getenv("url"),
-    username="default",
+client = redis.Redis(
+    host=os.getenv("host"),
+    port=os.getenv("port"),
     password=os.getenv("password"),
     decode_responses=True,
 )
