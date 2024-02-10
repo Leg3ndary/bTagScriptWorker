@@ -14,28 +14,28 @@ The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
 """
 
-import asyncio
 import json
 import os
 import sys
 import urllib
 from datetime import datetime
 from random import randint
-from threading import Thread
 from urllib.parse import unquote
 
 import bTagScript as tse
 import redis
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from dotenv import load_dotenv
+
+load_dotenv()
 
 client = redis.from_url(
-    url=os.environ["url"],
+    url=os.getenv("url"),
     username="default",
-    password=os.environ["password"],
+    password=os.getenv("password"),
     decode_responses=True,
 )
-
 
 class FakeAvatar:
     """
@@ -260,18 +260,4 @@ def run() -> None:
     """
     app.run(host="0.0.0.0", port=8080)
 
-
-async def keep_alive() -> None:
-    """
-    Keep the server alive
-    """
-    while True:
-        await asyncio.sleep(randint(50, 80))
-        with urllib.request.urlopen("https://btp.leg3ndary.repl.co"):
-            pass
-
-
-Thread(target=run).start()
-
-if sys.platform.lower() == "linux":
-    Thread(target=asyncio.run(keep_alive())).start()
+run()
