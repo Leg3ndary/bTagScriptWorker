@@ -45,6 +45,8 @@ db = MySQLdb.connect(
     db="leg3ndary$btaguses"
 )
 
+cursor = db.cursor()
+
 class FakeAvatar:
     """
     Creating a fake avatar object
@@ -236,19 +238,20 @@ def v2_process() -> None:
 
     Uses get as post requires you to encode params and decode them, which is a pain.
     """
-    with db.cursor() as cursor:
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS uses (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                uses INT NOT NULL
-            )
-        """)
-        cursor.execute("SELECT * FROM uses")
-        uses = cursor.fetchone()
+    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS uses (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            uses INT NOT NULL
+        )
+    """)
+    cursor.execute("SELECT * FROM uses")
+    uses = cursor.fetchone()
 
-        if uses:
-            cursor.execute("UPDATE uses SET uses = %s WHERE id = %s", (uses[1] + 1, uses[0]))
-        db.commit()
+    if uses:
+        cursor.execute("UPDATE uses SET uses = %s WHERE id = %s", (uses[1] + 1, uses[0]))
+    db.commit()
+
 
     body = request.form
     seeds = clean_seeds(json.loads(decode_tagscript(body.get("seeds", ""))))
