@@ -23,18 +23,26 @@ from random import randint
 from urllib.parse import unquote
 
 import bTagScript as tse
-import redis
+# import redis
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from dotenv import load_dotenv
+import MySQLdb
 
 load_dotenv()
 
-client = redis.Redis(
-    host=os.getenv("host"),
-    port=os.getenv("port"),
-    password=os.getenv("password"),
-    decode_responses=True,
+# client = redis.Redis(
+#     host=os.getenv("host"),
+#     port=os.getenv("port"),
+#     password=os.getenv("password"),
+#     decode_responses=True,
+# )
+
+db = MySQLdb.connect(
+    host=os.getenv("shost"),
+    user=os.getenv("susername"), 
+    passwd=os.getenv("spassword"),
+    db="leg3ndary$btaguses"
 )
 
 class FakeAvatar:
@@ -228,8 +236,21 @@ def v2_process() -> None:
 
     Uses get as post requires you to encode params and decode them, which is a pain.
     """
-    uses = str(int(client.get("uses")) + 1)
-    client.set("uses", uses)
+    with db.cursor() as cursor:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS uses (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                uses INT NOT NULL
+            )
+        """)
+        cursor.execute("SELECT * FROM uses")
+        uses = cursor.fetchone()
+
+        if uses:
+            cursor.execute("UPDATE uses SET uses = %s WHERE id = %s", (uses[1] + 1, uses[0]))
+        else:
+            cursor.execute("INSERT INTO uses (uses) VALUES (13928)")
+        db.commit()
 
     body = request.form
     seeds = clean_seeds(json.loads(decode_tagscript(body.get("seeds", ""))))
