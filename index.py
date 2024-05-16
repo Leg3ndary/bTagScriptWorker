@@ -248,8 +248,6 @@ def v2_process() -> None:
 
         if uses:
             cursor.execute("UPDATE uses SET uses = %s WHERE id = %s", (uses[1] + 1, uses[0]))
-        else:
-            cursor.execute("INSERT INTO uses (uses) VALUES (13928)")
         db.commit()
 
     body = request.form
