@@ -20,6 +20,7 @@ import sys
 import urllib
 from datetime import datetime
 from random import randint
+import time
 from urllib.parse import unquote
 
 import bTagScript as tse
@@ -38,14 +39,21 @@ load_dotenv()
 #     decode_responses=True,
 # )
 
-db = MySQLdb.connect(
-    host=os.getenv("shost"),
-    user=os.getenv("susername"), 
-    passwd=os.getenv("spassword"),
-    db="leg3ndary$btaguses"
-)
+def connect_to_db():
+    try:
+        return MySQLdb.connect(
+            host=os.getenv("shost"),
+            user=os.getenv("susername"),
+            passwd=os.getenv("spassword"),
+            db="leg3ndary$btaguses"
+        )
+    except MySQLdb.MySQLError as e:
+        print(f"Error connecting to MySQL: {e}")
+        time.sleep(5)
+        return connect_to_db()
 
-cursor = db.cursor()
+# db = connect_to_db()
+# cursor = db.cursor()
 
 class FakeAvatar:
     """
@@ -238,7 +246,8 @@ def v2_process() -> None:
 
     Uses get as post requires you to encode params and decode them, which is a pain.
     """
-    
+    db = connect_to_db()
+    cursor = db.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS uses (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -251,7 +260,7 @@ def v2_process() -> None:
     if uses:
         cursor.execute("UPDATE uses SET uses = %s WHERE id = %s", (uses[1] + 1, uses[0]))
     db.commit()
-
+    cursor.close()
 
     body = request.form
     seeds = clean_seeds(json.loads(decode_tagscript(body.get("seeds", ""))))
